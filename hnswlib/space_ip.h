@@ -208,7 +208,7 @@ class InnerProductSpace : public SpaceInterface<float> {
     size_t data_size_;
     size_t dim_;
 
-   public:
+public:
     InnerProductSpace(size_t dim) {
         fstdistfunc_ = InnerProduct;
         if (dim % 4 == 0)

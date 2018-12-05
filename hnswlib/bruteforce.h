@@ -1,12 +1,11 @@
 #pragma once
 #include <fstream>
 #include <unordered_map>
-#include "hnswlib.h"
 
 namespace hnswlib {
 template <typename dist_t>
 class BruteforceSearch : public AlgorithmInterface<dist_t> {
-  public:
+public:
     BruteforceSearch(SpaceInterface<dist_t> *s) {
     }
     BruteforceSearch(SpaceInterface<dist_t> *s, const std::string &location) {

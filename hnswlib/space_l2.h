@@ -149,7 +149,7 @@ class L2Space : public SpaceInterface<float> {
     size_t data_size_;
     size_t dim_;
 
-   public:
+public:
     L2Space(size_t dim) {
         fstdistfunc_ = L2Sqr;
         if (dim % 4 == 0)
@@ -211,7 +211,7 @@ class L2SpaceI : public SpaceInterface<int> {
     size_t data_size_;
     size_t dim_;
 
-   public:
+public:
     L2SpaceI(size_t dim) {
         fstdistfunc_ = L2SqrI;
         dim_ = dim;

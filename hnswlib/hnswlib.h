@@ -35,7 +35,7 @@ using DISTFUNC = MTYPE (*)(const void *, const void *, const void *);
 
 template <typename MTYPE>
 class SpaceInterface {
-   public:
+public:
     //virtual void search(void *);
     virtual size_t get_data_size() = 0;
 
@@ -46,7 +46,7 @@ class SpaceInterface {
 
 template <typename dist_t>
 class AlgorithmInterface {
-   public:
+public:
     virtual void addPoint(void *datapoint, labeltype label) = 0;
     virtual std::priority_queue<std::pair<dist_t, labeltype>> searchKnn(const void *, size_t) const = 0;
     virtual void saveIndex(const std::string &location) = 0;
@@ -56,7 +56,7 @@ class AlgorithmInterface {
 
 }  // namespace hnswlib
 
+#include "space_l2.h"
+#include "space_ip.h"
 #include "bruteforce.h"
 #include "hnswalg.h"
-#include "space_ip.h"
-#include "space_l2.h"
