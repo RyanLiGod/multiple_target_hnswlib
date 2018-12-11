@@ -132,6 +132,7 @@ public:
     size_t label_offset_;
     DISTFUNC<dist_t> fstdistfunc_;
     void* dist_func_param_;  // 数据的维数 dim
+    std::unordered_map<labeltype, tableint> label_lookup_;
 
     std::default_random_engine level_generator_;
 
@@ -292,8 +293,7 @@ public:
 
     // 探索性地找到小于M个邻居
     void getNeighborsByHeuristic2(
-        std::priority_queue<std::pair<dist_t, tableint>, std::vector<std::pair<dist_t, tableint>>, CompareByFirst>& top_candidates,
-        const size_t M) {
+        std::priority_queue<std::pair<dist_t, tableint>, std::vector<std::pair<dist_t, tableint>>, CompareByFirst>& top_candidates, const size_t M) {
         if (top_candidates.size() < M) {
             return;
         }
@@ -312,11 +312,7 @@ public:
             queue_closest.pop();
             bool good = true;
             for (std::pair<dist_t, tableint> second_pair : return_list) {
-                dist_t curdist =
-                    fstdistfunc_(getDataByInternalId(second_pair.second),
-                                 getDataByInternalId(curent_pair.second),
-                                 dist_func_param_);
-                ;
+                dist_t curdist = fstdistfunc_(getDataByInternalId(second_pair.second), getDataByInternalId(curent_pair.second), dist_func_param_);
                 if (curdist < dist_to_query) {
                     good = false;
                     break;
@@ -598,11 +594,11 @@ public:
         revSize_ = 1.0 / mult_;
         ef_ = 10;
         for (size_t i = 0; i < cur_element_count; i++) {
+            label_lookup_[getExternalLabel(i)] = i;
             unsigned int linkListSize;
             readBinaryPOD(input, linkListSize);
             if (linkListSize == 0) {
                 element_levels_[i] = 0;
-
                 linkLists_[i] = nullptr;
             } else {
                 element_levels_[i] = linkListSize / size_links_per_element_;
@@ -614,6 +610,20 @@ public:
 
         return;
     }
+
+    template <typename data_t>
+    std::vector<data_t> getDataByLabel(labeltype label) {
+        tableint label_c = label_lookup_[label];
+        char* data_ptrv = getDataByInternalId(label_c);
+        size_t dim = *((size_t*)dist_func_param_);
+        std::vector<data_t> data;
+        data_t* data_ptr = (data_t*)data_ptrv;
+        for (int i = 0; i < dim; i++) {
+            data.push_back(*data_ptr);
+            data_ptr += 1;
+        }
+        return data;
+    };
 
     void addPoint(void* data_point, labeltype label) {
         addPoint(data_point, label, -1);
@@ -627,11 +637,12 @@ public:
                 throw std::runtime_error("The number of elements exceeds the specified limit");
             };
             cur_c = cur_element_count;
+            label_lookup_[label] = cur_c;  // expected unique, if not will overwrite
             cur_element_count++;
         }
         std::unique_lock<std::mutex> lock_el(link_list_locks_[cur_c]);
         int curlevel = getRandomLevel(mult_);  // 获取一个层数
-        std::cout << "curlevel: " << curlevel << std::endl;
+        // std::cout << "curlevel: " << curlevel << std::endl;
 
         if (level > 0)
             curlevel = level;

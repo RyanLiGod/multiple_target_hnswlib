@@ -1,5 +1,6 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include <iostream>
 #include <thread>
 #include "../hnswlib/hnswlib.h"
@@ -67,9 +68,9 @@ inline void ParallelFor(size_t start, size_t end, size_t numThreads, Function fn
     }
 }
 
-template <typename dist_t>
+template <typename dist_t, typename data_t = float>
 class Index {
-   public:
+public:
     Index(const std::string &space_name, const int dim) : space_name(space_name), dim(dim) {
         normalize = false;
         if (space_name == "l2") {
@@ -135,7 +136,7 @@ class Index {
 
         size_t rows, features;
 
-        std::cout << "数据的维度： " << buffer.ndim << std::endl;
+        // std::cout << "数据的维度： " << buffer.ndim << std::endl;
 
         if (buffer.ndim != 2 && buffer.ndim != 1)
             throw std::runtime_error("data must be a 1d/2d array");  // 数组的维数只能是1或者2
@@ -210,6 +211,33 @@ class Index {
             };
             cur_l += rows;  // cur_l指到加完点以后的新位置
         }
+    }
+
+    std::vector<std::vector<data_t>> getDataReturnList(py::object ids_ = py::none()) {
+        std::vector<size_t> ids;
+        if (!ids_.is_none()) {
+            py::array_t<size_t, py::array::c_style | py::array::forcecast> items(ids_);
+            auto ids_numpy = items.request();
+            std::vector<size_t> ids1(ids_numpy.shape[0]);
+            for (size_t i = 0; i < ids1.size(); i++) {
+                ids1[i] = items.data()[i];
+            }
+            ids.swap(ids1);
+        }
+        std::vector<std::vector<data_t>> data;
+        for (auto id : ids) {
+            data.push_back(appr_alg->template getDataByLabel<data_t>(id));
+        }
+        return data;
+    }
+
+    std::vector<unsigned int> getIdsList() {
+        std::vector<unsigned int> ids;
+
+        for (auto kv : appr_alg->label_lookup_) {
+            ids.push_back(kv.first);
+        }
+        return ids;
     }
 
     py::object knnQuery_return_numpy(py::object input, size_t k = 1, int num_threads = -1) {
@@ -327,6 +355,8 @@ PYBIND11_PLUGIN(hnswlib) {
              py::arg("ef_construction") = 200, py::arg("random_seed") = 100)
         .def("knn_query", &Index<float>::knnQuery_return_numpy, py::arg("data"), py::arg("k") = 1, py::arg("num_threads") = -1)
         .def("add_items", &Index<float>::addItems, py::arg("data"), py::arg("ids") = py::none(), py::arg("num_threads") = -1)
+        .def("get_items", &Index<float, float>::getDataReturnList, py::arg("ids") = py::none())
+        .def("get_ids_list", &Index<float>::getIdsList)
         .def("set_ef", &Index<float>::set_ef, py::arg("ef"))
         .def("set_num_threads", &Index<float>::set_num_threads, py::arg("num_threads"))
         .def("save_index", &Index<float>::saveIndex, py::arg("path_to_index"))
